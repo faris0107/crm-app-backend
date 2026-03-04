@@ -15,7 +15,12 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
     define: {
         timestamps: true,
         underscored: true
-    }
+    },
+    dialectOptions: process.env.DB_HOST !== 'localhost' ? {
+        ssl: {
+            rejectUnauthorized: false
+        }
+    } : {}
 });
 
 module.exports = sequelize;
