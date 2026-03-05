@@ -58,7 +58,7 @@ exports.isStaffOrAdmin = (req, res, next) => {
     const userRole = req.user.role;
     const isSystem = !req.user.entity_id;
 
-    if (isSystem || userRole === 'ADMIN' || userRole === 'L1') {
+    if (isSystem || userRole === 'ADMIN' || userRole === 'L1' || userRole === 'L2') {
         return next();
     }
 
