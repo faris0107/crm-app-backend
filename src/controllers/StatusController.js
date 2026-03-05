@@ -3,10 +3,18 @@ const { Op } = require('sequelize');
 
 exports.getStatuses = async (req, res) => {
     try {
-        const { all } = req.query;
+        const { all, entity_id } = req.query;
         let queryFilter = {};
 
-        if (req.user.activeEntityId) {
+        if (entity_id) {
+            // Explicit filter requested
+            queryFilter = {
+                [Op.or]: [
+                    { entity_id: entity_id },
+                    { entity_id: null } // System default statuses
+                ]
+            };
+        } else if (req.user.activeEntityId) {
             // Context-scoped user (Tenant or SuperAdmin in context)
             queryFilter = {
                 [Op.or]: [
@@ -15,8 +23,8 @@ exports.getStatuses = async (req, res) => {
                 ]
             };
         } else {
-            // Global Super Admin (No context)
-            queryFilter = {}; // All statuses
+            // Global Super Admin (No context, no explicit filter) - show everything
+            queryFilter = {};
         }
 
         // Always filter out deleted items

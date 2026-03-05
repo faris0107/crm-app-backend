@@ -35,16 +35,12 @@ class PeopleService {
     }
 
     async createPerson(data, entityId, userId, currentUserRole) {
-        let finalAssignedTo = data.assigned_to;
+        let finalAssignedTo = data.assigned_to || null;
 
-        // --- Hierarchy Validation ---
+        // --- Hierarchy Validation (Only if a target is chosen) ---
         if (currentUserRole === 'L2') {
             finalAssignedTo = userId; // L2 always adds to themselves
-        } else {
-            if (!finalAssignedTo) {
-                throw new Error('Contacts must be assigned to an L2 Supervisor');
-            }
-
+        } else if (finalAssignedTo) {
             // Verify assigning to an L2 role
             const { Role } = require('../models');
             const targetUser = await User.findByPk(finalAssignedTo, {
@@ -62,6 +58,7 @@ class PeopleService {
                 }
             }
         }
+        // If not L2 and finalAssignedTo is null, it stays null (Unassigned)
         // ----------------------------
 
         const person = await Person.create({
@@ -73,7 +70,7 @@ class PeopleService {
         await Timeline.create({
             person_id: person.id,
             user_id: userId,
-            action: 'Created contact',
+            action: finalAssignedTo ? 'Created and assigned contact' : 'Created unassigned contact',
             entity_id: entityId
         });
         return person;
@@ -83,9 +80,16 @@ class PeopleService {
         const person = await Person.findOne({ where: { id, entity_id: entityId } });
         if (!person) throw new Error('Person not found');
 
-        // RBAC check
-        if (role === 'L2' && person.assigned_to !== userId) {
-            throw new Error('Unauthorized: You can only edit contacts assigned to you');
+        // RBAC check: 
+        // 1. Super Admin can edit everything
+        // 2. Others can edit if it's assigned to them OR if it's currently unassigned (null)
+        const isSuperAdmin = !entityId; // Context middleware sets entityId to null for global superadmin
+
+        if (!isSuperAdmin) {
+            const canEdit = person.assigned_to === userId || person.assigned_to === null;
+            if (!canEdit) {
+                throw new Error('Unauthorized: You can only edit contacts assigned to you or unassigned contacts');
+            }
         }
 
         await person.update({

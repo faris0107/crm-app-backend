@@ -22,7 +22,7 @@ exports.scopeToTenant = (req, res, next) => {
             req.user.activeEntityId = targetId;
         } else {
             console.log(`[TENANT] SuperAdmin in GLOBAL view`);
-            req.tenantFilter = { entity_id: null };
+            req.tenantFilter = {}; // NOT scoped - see EVERYTHING
             req.user.activeEntityId = null;
         }
         return next();

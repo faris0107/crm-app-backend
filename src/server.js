@@ -101,11 +101,22 @@ const initializeDatabase = async () => {
     // 2. Ensure ALL companies have default roles and statuses
     const allCompanies = await Entity.findAll({ where: { is_deleted: false } });
     for (const company of allCompanies) {
-        // Migration: Rename existing 'STAFF' roles to 'L1' for this company
+        // Migration: Rename existing 'STAFF' roles to 'L1' (any casing)
         await Role.update(
             { name: 'L1', description: 'Level 1 Manager' },
-            { where: { name: 'STAFF', entity_id: company.id } }
-        );
+            {
+                where: {
+                    name: { [Op.iLike || Op.regexp]: '%staff%' },
+                    entity_id: company.id
+                }
+            }
+        ).catch(() => {
+            // Fallback for DBs that don't support iLike (like SQLite)
+            return Role.update(
+                { name: 'L1', description: 'Level 1 Manager' },
+                { where: { name: 'STAFF', entity_id: company.id } }
+            );
+        });
 
         // Roles for this company
         const companyRoles = [
