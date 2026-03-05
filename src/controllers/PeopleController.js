@@ -1,10 +1,48 @@
 const PeopleService = require('../services/PeopleService');
+const { Person, User } = require('../models');
+const { Op } = require('sequelize');
 const xlsx = require('xlsx');
 
 exports.getPeople = async (req, res) => {
     try {
-        const people = await PeopleService.getAllPeople(req.tenantFilter);
-        res.json(people);
+        const { limit = 48, page = 1, assigned_to, parent_l1, parent_admin, search } = req.query;
+        const offset = (page - 1) * limit;
+
+        let finalFilter = { ...req.tenantFilter, is_deleted: false, active: true };
+
+        if (assigned_to) {
+            finalFilter.assigned_to = assigned_to;
+        } else if (parent_l1) {
+            const l2s = await User.findAll({ where: { parent_id: parent_l1 }, attributes: ['id'] });
+            finalFilter.assigned_to = l2s.map(u => u.id);
+        } else if (parent_admin) {
+            const l1s = await User.findAll({ where: { parent_id: parent_admin }, attributes: ['id'] });
+            const l2s = await User.findAll({ where: { parent_id: l1s.map(u => u.id) }, attributes: ['id'] });
+            finalFilter.assigned_to = l2s.map(u => u.id);
+        }
+
+        if (search) {
+            finalFilter[Op.or] = [
+                { name: { [Op.iLike]: `%${search}%` } },
+                { text_id: { [Op.iLike]: `%${search}%` } }
+            ];
+        }
+
+        const people = await PeopleService.getAllPeople(finalFilter, limit, offset);
+
+        const totalCount = await Person.count({
+            where: finalFilter
+        });
+
+        res.json({
+            people,
+            pagination: {
+                total: totalCount,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                hasMore: totalCount > (offset + people.length)
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -1,8 +1,8 @@
 const { Person, Status, User, Timeline } = require('../models');
 
 class PeopleService {
-    async getAllPeople(filter) {
-        return await Person.findAll({
+    async getAllPeople(filter, limit = null, offset = null) {
+        const options = {
             where: { ...filter, is_deleted: false, active: true },
             include: [
                 { model: Status, attributes: ['name', 'color'] },
@@ -11,7 +11,12 @@ class PeopleService {
                 { model: User, as: 'Updater', attributes: ['name'] }
             ],
             order: [['created_at', 'DESC']]
-        });
+        };
+
+        if (limit) options.limit = parseInt(limit);
+        if (offset) options.offset = parseInt(offset);
+
+        return await Person.findAll(options);
     }
 
     async getPersonDetail(id, filter) {
