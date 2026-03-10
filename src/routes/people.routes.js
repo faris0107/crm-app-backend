@@ -35,6 +35,7 @@ router.post('/', PeopleController.createPerson);
 router.get('/:id', PeopleController.getPerson);
 router.put('/:id', PeopleController.updatePerson);
 router.delete('/:id', PeopleController.deletePerson);
+router.post('/:id/restore', PeopleController.restorePerson);
 
 /**
  * @swagger

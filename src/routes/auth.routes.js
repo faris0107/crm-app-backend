@@ -3,6 +3,7 @@ const router = express.Router();
 const { body } = require('express-validator');
 const AuthController = require('../controllers/AuthController');
 const { validate } = require('../middleware/validator.middleware');
+const { verifyToken } = require('../middleware/auth.middleware');
 
 /**
  * @swagger
@@ -65,7 +66,7 @@ router.post('/verify-otp', [
  */
 router.post('/refresh-token', AuthController.refreshToken);
 
-router.post('/change-password', AuthController.changePassword);
+router.post('/change-password', verifyToken, AuthController.changePassword);
 router.post('/forgot-password/request', AuthController.forgotPasswordRequest);
 router.post('/forgot-password/reset', AuthController.forgotPasswordReset);
 

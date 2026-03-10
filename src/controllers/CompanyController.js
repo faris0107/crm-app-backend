@@ -6,6 +6,21 @@ exports.createCompany = async (req, res) => {
     try {
         const { name, code, primary_email, primary_mobile, admin_name, admin_email, admin_password } = req.body;
 
+        // --- Uniqueness Checks ---
+        const existingCode = await Entity.findOne({ where: { code, is_deleted: false } });
+        if (existingCode) return res.status(400).json({ message: 'Company with this code already exists' });
+
+        if (primary_email) {
+            const existingEmail = await Entity.findOne({ where: { primary_email, is_deleted: false } });
+            if (existingEmail) return res.status(400).json({ message: 'Company with this email already exists' });
+        }
+
+        if (primary_mobile) {
+            const existingMobile = await Entity.findOne({ where: { primary_mobile, is_deleted: false } });
+            if (existingMobile) return res.status(400).json({ message: 'Company with this mobile number already exists' });
+        }
+        // -------------------------
+
         // 1. Create the Company (Entity)
         const entity = await Entity.create({
             name,
@@ -20,7 +35,7 @@ exports.createCompany = async (req, res) => {
             { name: 'STAFF', description: 'Company staff member', is_system: false, entity_id: entity.id },
             { name: 'USER', description: 'Standard platform users', is_system: false, entity_id: entity.id }
         ];
-        
+
         const createdRoles = {};
         for (const r of companyRoles) {
             const role = await Role.create(r);
@@ -61,7 +76,7 @@ exports.getCompanies = async (req, res) => {
     try {
         const { deleted } = req.query;
         let where = {};
-        
+
         if (deleted === 'true') {
             where.is_deleted = true;
         } else {
@@ -85,8 +100,34 @@ exports.getCompanies = async (req, res) => {
 
 exports.updateCompany = async (req, res) => {
     try {
-        const entity = await Entity.findByPk(req.params.id);
+        const { id } = req.params;
+        const { name, code, primary_email, primary_mobile } = req.body;
+
+        const entity = await Entity.findByPk(id);
         if (!entity) throw new Error('Company not found');
+
+        // --- Uniqueness Checks ---
+        if (code) {
+            const existingCode = await Entity.findOne({
+                where: { code, is_deleted: false, id: { [Op.ne]: id } }
+            });
+            if (existingCode) return res.status(400).json({ message: 'Company with this code already exists' });
+        }
+
+        if (primary_email) {
+            const existingEmail = await Entity.findOne({
+                where: { primary_email, is_deleted: false, id: { [Op.ne]: id } }
+            });
+            if (existingEmail) return res.status(400).json({ message: 'Company with this email already exists' });
+        }
+
+        if (primary_mobile) {
+            const existingMobile = await Entity.findOne({
+                where: { primary_mobile, is_deleted: false, id: { [Op.ne]: id } }
+            });
+            if (existingMobile) return res.status(400).json({ message: 'Company with this mobile number already exists' });
+        }
+        // -------------------------
 
         await entity.update(req.body);
         res.json(entity);

@@ -4,9 +4,9 @@ const options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'CRM API Documentation',
+            title: 'Imaniya Kavalai API Documentation',
             version: '1.0.0',
-            description: 'Professional CRM Backend API with Multi-tenancy and RBAC',
+            description: 'Professional Imaniya Kavalai Backend API with Multi-tenancy and RBAC',
         },
         servers: [
             {

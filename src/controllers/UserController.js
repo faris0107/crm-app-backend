@@ -4,7 +4,17 @@ const bcrypt = require('bcryptjs');
 
 exports.addUser = async (req, res) => {
     try {
-        const { email, name, role_id, entity_id, password, user_code, parent_id } = req.body;
+        const { email, name, role_id, entity_id, password, user_code, mobile, parent_id } = req.body;
+
+        // --- Uniqueness Checks ---
+        const existingEmail = await User.findOne({ where: { email, is_deleted: false } });
+        if (existingEmail) return res.status(400).json({ message: 'User with this email already exists' });
+
+        if (mobile) {
+            const existingMobile = await User.findOne({ where: { mobile, is_deleted: false } });
+            if (existingMobile) return res.status(400).json({ message: 'User with this mobile number already exists' });
+        }
+        // -------------------------
 
         // --- Role Hierarchy Check ---
         const targetRole = await Role.findByPk(role_id);
@@ -62,6 +72,7 @@ exports.addUser = async (req, res) => {
             name,
             role_id,
             user_code: user_code || null,
+            mobile: mobile || null,
             password: hashedPassword,
             entity_id: entity_id || req.user.activeEntityId,
             parent_id: finalParentId,
@@ -148,7 +159,23 @@ exports.getUsers = async (req, res) => {
 exports.updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { email, name, role_id, entity_id, password, user_code, parent_id } = req.body;
+        const { email, name, role_id, entity_id, password, user_code, mobile, parent_id } = req.body;
+
+        // --- Uniqueness Checks ---
+        if (email) {
+            const existingEmail = await User.findOne({
+                where: { email, is_deleted: false, id: { [Op.ne]: id } }
+            });
+            if (existingEmail) return res.status(400).json({ message: 'User with this email already exists' });
+        }
+
+        if (mobile) {
+            const existingMobile = await User.findOne({
+                where: { mobile, is_deleted: false, id: { [Op.ne]: id } }
+            });
+            if (existingMobile) return res.status(400).json({ message: 'User with this mobile number already exists' });
+        }
+        // -------------------------
 
         const user = await User.findByPk(id, {
             include: [{ model: Role, attributes: ['name'] }]
@@ -201,6 +228,7 @@ exports.updateUser = async (req, res) => {
             name,
             role_id,
             user_code: user_code === '' ? null : (user_code || user.user_code),
+            mobile: mobile === '' ? null : (mobile || user.mobile),
             parent_id: finalParentId,
             updated_by: req.user.id
         };

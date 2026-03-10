@@ -173,7 +173,7 @@ sequelize.sync({ alter: true }).then(async () => {
     await initializeDatabase();
     app.listen(PORT, () => {
         console.log('\n******************************************');
-        console.log(`🚀 CRM SERVER STARTING AT: ${new Date().toISOString()}`);
+        console.log(`🚀 IMANIYA KAVALAI SERVER STARTING AT: ${new Date().toISOString()}`);
         console.log(`Backend running on http://localhost:${PORT}`);
         console.log('******************************************\n');
         console.log(`📖 API Docs: http://localhost:${PORT}/api-docs`);

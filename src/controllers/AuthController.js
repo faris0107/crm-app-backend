@@ -57,7 +57,7 @@ exports.googleLogin = async (req, res) => {
     try {
         const { idToken } = req.body;
         const payload = await AuthService.verifyGoogleToken(idToken);
-        const user = await AuthService.findOrCreateGoogleUser(payload);
+        const user = await AuthService.verifyGoogleUser(payload);
 
         const tokens = AuthService.generateTokens(user);
         await AuthService.updateRefreshToken(user.id, tokens.refreshToken);
@@ -74,7 +74,7 @@ exports.googleLogin = async (req, res) => {
         });
     } catch (error) {
         logger.error(`Google Login attempt failed: ${error.message}`);
-        res.status(400).json({ message: 'Social authentication failed' });
+        res.status(400).json({ message: error.message || 'Social authentication failed' });
     }
 };
 
@@ -134,6 +134,10 @@ exports.changePassword = async (req, res) => {
     try {
         const { oldPassword, newPassword } = req.body;
         const user = await AuthService.findUserByEmailOnly(req.user.email);
+
+        if (oldPassword === newPassword) {
+            return res.status(400).json({ message: 'New password cannot be the same as the old password' });
+        }
 
         await AuthService.verifyPassword(user, oldPassword);
         await AuthService.updatePassword(user.id, newPassword);

@@ -83,39 +83,31 @@ class AuthService {
         }
     }
 
-    async findOrCreateGoogleUser(payload) {
-        const { sub: google_id, email, name, picture } = payload;
+    async verifyGoogleUser(payload) {
+        const { sub: google_id, email } = payload;
 
-        let user = await User.findOne({ where: { email } });
-
-        if (user) {
-            if (!user.active || user.is_deleted) throw new Error('This account has been disabled');
-            if (!user.google_id) {
-                await user.update({ google_id });
-            }
-            return User.findByPk(user.id, {
-                include: [{ model: Entity, attributes: ['id', 'name', 'code'] }]
-            });
-        }
-
-        // For new users via Google, they might need a default entity
-        const defaultEntity = await Entity.findOne({ where: { code: 'PRO123' } });
-
-        user = await User.create({
-            email,
-            name,
-            google_id,
-            role: 'L1',
-            entity_id: defaultEntity?.id,
-            active: true
-        });
-
-        return User.findByPk(user.id, {
+        let user = await User.findOne({
+            where: { email },
             include: [
                 { model: Entity, attributes: ['id', 'name', 'code'] },
                 { model: Role, attributes: ['name'] }
             ]
         });
+
+        if (!user) {
+            throw new Error('This Google account is not registered. Please contact your admin.');
+        }
+
+        if (!user.active || user.is_deleted) {
+            throw new Error('This account has been disabled');
+        }
+
+        // Link Google ID if not already linked
+        if (!user.google_id) {
+            await user.update({ google_id });
+        }
+
+        return user;
     }
 
     async updatePassword(userId, newPassword) {

@@ -5,12 +5,30 @@ const xlsx = require('xlsx');
 
 exports.getPeople = async (req, res) => {
     try {
-        const { limit = 48, page = 1, assigned_to, parent_l1, parent_admin, search } = req.query;
+        const { limit = 48, page = 1, assigned_to, parent_l1, parent_admin, search, status_id, show_deleted } = req.query;
         const offset = (page - 1) * limit;
 
-        let finalFilter = { ...req.tenantFilter, is_deleted: false, active: true };
+        const isSuperAdmin = !req.user.entity_id;
+        let finalFilter = { ...req.tenantFilter };
 
-        if (assigned_to) {
+        if (show_deleted === 'true' && isSuperAdmin) {
+            finalFilter.is_deleted = true;
+        } else {
+            finalFilter.is_deleted = false;
+            finalFilter.active = true;
+        }
+
+        if (status_id) {
+            finalFilter.status_id = status_id;
+        }
+
+        // --- Role Based Restriction ---
+        if (req.user.role === 'L2') {
+            // L2 can ONLY see their own assigned contacts
+            finalFilter.assigned_to = req.user.id;
+        } else if (assigned_to === 'null') {
+            finalFilter.assigned_to = null;
+        } else if (assigned_to) {
             finalFilter.assigned_to = assigned_to;
         } else if (parent_l1) {
             const l2s = await User.findAll({ where: { parent_id: parent_l1 }, attributes: ['id'] });
@@ -22,9 +40,11 @@ exports.getPeople = async (req, res) => {
         }
 
         if (search) {
+            const searchTerms = search.trim();
             finalFilter[Op.or] = [
-                { name: { [Op.iLike]: `%${search}%` } },
-                { text_id: { [Op.iLike]: `%${search}%` } }
+                { name: { [Op.iLike || Op.like]: `%${searchTerms}%` } },
+                { text_id: { [Op.iLike || Op.like]: `%${searchTerms}%` } },
+                { mobile: { [Op.iLike || Op.like]: `%${searchTerms}%` } }
             ];
         }
 
@@ -112,8 +132,17 @@ exports.bulkUpload = async (req, res) => {
 
 exports.deletePerson = async (req, res) => {
     try {
-        await PeopleService.deletePerson(req.params.id, req.user.activeEntityId, req.user.id);
+        await PeopleService.deletePerson(req.params.id, req.user.activeEntityId, req.user.id, req.user.role);
         res.json({ message: 'Contact deleted successfully' });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
+exports.restorePerson = async (req, res) => {
+    try {
+        const person = await PeopleService.restorePerson(req.params.id, req.user.activeEntityId, req.user.id, req.user.role);
+        res.json(person);
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
