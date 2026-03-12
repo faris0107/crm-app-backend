@@ -67,6 +67,7 @@ exports.googleLogin = async (req, res) => {
             user: {
                 id: user.id,
                 name: user.name,
+                email: user.email,
                 role: user.Role?.name || 'L1',
                 entity_id: user.entity_id,
                 workspace: user.Entity?.name || (user.entity_id ? 'Workspace' : 'System')
