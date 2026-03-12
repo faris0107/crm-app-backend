@@ -24,9 +24,12 @@ const logger = {
     request: (req, res, next) => {
         const timestamp = new Date().toISOString();
         const { method, url, ip } = req;
-        const log = `[${timestamp}] ${method} ${url} - ${ip}\n`;
-        fs.appendFileSync(logFile, log);
-        console.log(log.trim());
+
+        res.on('finish', () => {
+            const log = `[${timestamp}] ${method} ${url} - ${res.statusCode} - ${ip}\n`;
+            fs.appendFileSync(logFile, log);
+            console.log(log.trim());
+        });
         next();
     }
 };

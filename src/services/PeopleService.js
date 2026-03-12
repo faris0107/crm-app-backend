@@ -24,6 +24,7 @@ class PeopleService {
         if (limit) options.limit = parseInt(limit);
         if (offset) options.offset = parseInt(offset);
 
+        // console.log('DEBUG: getAllPeople options:', JSON.stringify(options, null, 2));
         return await Person.findAll(options);
     }
 

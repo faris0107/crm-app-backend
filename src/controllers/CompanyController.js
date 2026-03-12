@@ -32,7 +32,8 @@ exports.createCompany = async (req, res) => {
         // 2. Seed Default Roles for this Company
         const companyRoles = [
             { name: 'ADMIN', description: 'Company overall administrator', is_system: false, entity_id: entity.id },
-            { name: 'STAFF', description: 'Company staff member', is_system: false, entity_id: entity.id },
+            { name: 'L1', description: 'Level 1 Manager', is_system: false, entity_id: entity.id },
+            { name: 'L2', description: 'Level 2 Supervisor', is_system: false, entity_id: entity.id },
             { name: 'USER', description: 'Standard platform users', is_system: false, entity_id: entity.id }
         ];
 

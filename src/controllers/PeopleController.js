@@ -2,6 +2,7 @@ const PeopleService = require('../services/PeopleService');
 const { Person, User } = require('../models');
 const { Op } = require('sequelize');
 const xlsx = require('xlsx');
+const logger = require('../utils/logger');
 
 exports.getPeople = async (req, res) => {
     try {
@@ -42,9 +43,9 @@ exports.getPeople = async (req, res) => {
         if (search) {
             const searchTerms = search.trim();
             finalFilter[Op.or] = [
-                { name: { [Op.iLike || Op.like]: `%${searchTerms}%` } },
-                { text_id: { [Op.iLike || Op.like]: `%${searchTerms}%` } },
-                { mobile: { [Op.iLike || Op.like]: `%${searchTerms}%` } }
+                { name: { [Op.like]: `%${searchTerms}%` } },
+                { text_id: { [Op.like]: `%${searchTerms}%` } },
+                { mobile: { [Op.like]: `%${searchTerms}%` } }
             ];
         }
 
@@ -64,6 +65,7 @@ exports.getPeople = async (req, res) => {
             }
         });
     } catch (error) {
+        logger.error('SERVER ERROR IN GET_PEOPLE:', error.stack);
         res.status(500).json({ message: error.message });
     }
 };

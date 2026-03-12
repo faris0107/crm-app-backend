@@ -106,7 +106,7 @@ const initializeDatabase = async () => {
             { name: 'L1', description: 'Level 1 Manager' },
             {
                 where: {
-                    name: { [Op.iLike || Op.regexp]: '%staff%' },
+                    name: { [Op.like]: '%staff%' },
                     entity_id: company.id
                 }
             }
@@ -168,7 +168,7 @@ const initializeDatabase = async () => {
     console.log(`✅ Initialization complete. Verified ${allCompanies.length} companies.`);
 };
 
-sequelize.sync({ alter: true }).then(async () => {
+sequelize.authenticate().then(async () => {
     console.log('✅ Database connected and synced');
     await initializeDatabase();
     app.listen(PORT, () => {
