@@ -113,20 +113,65 @@ exports.bulkUpload = async (req, res) => {
         const workbook = xlsx.readFile(req.file.path);
         const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-        const entityId = req.body.entity_id || req.user.activeEntityId;
+        const entityId = req.user.activeEntityId;
         const created = [];
+        const errors = [];
+
         for (const item of data) {
-            if (item.Name && item.ID) {
-                const person = await PeopleService.createPerson({
-                    name: item.Name,
-                    text_id: item.ID.toString(),
-                    mobile: item.Mobile?.toString(),
-                    tags: item.Tags ? item.Tags.split(',') : []
-                }, entityId, req.user.id);
-                created.push(person);
+            try {
+                // Name is mandatory, others are optional
+                if (item.Name || item.name) {
+                    const personData = {
+                        name: (item.Name || item.name).toString(),
+                        text_id: (item.ID || item.id || item.TextID || item.text_id)?.toString() || null,
+                        mobile: (item.Mobile || item.mobile || item.Phone || item.phone)?.toString() || null,
+                        country_code: (item.CountryCode || item.country_code)?.toString() || '+91',
+                        referred_by: (item.ReferredBy || item.referred_by || item.Referral || item.referral)?.toString() || null,
+                        tags: (item.Tags || item.tags) ? (item.Tags || item.tags).toString().split(',').map(t => t.trim()) : []
+                    };
+
+                    const person = await PeopleService.createPerson(personData, entityId, req.user.id, req.user.role);
+                    created.push(person);
+                } else {
+                    errors.push({ row: item, error: 'Name is mandatory' });
+                }
+            } catch (err) {
+                errors.push({ row: item, error: err.message });
             }
         }
-        res.json({ message: `Imported ${created.length} contacts`, count: created.length });
+        res.json({ 
+            message: `Imported ${created.length} contacts`, 
+            count: created.length,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (error) {
+        logger.error('BULK UPLOAD ERROR:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.downloadTemplate = async (req, res) => {
+    try {
+        const templateData = [
+            {
+                'Name': 'John Doe',
+                'ID': 'C001',
+                'Mobile': '9876543210',
+                'CountryCode': '+91',
+                'ReferredBy': 'Jane Smith',
+                'Tags': 'VIP, New'
+            }
+        ];
+
+        const worksheet = xlsx.utils.json_to_sheet(templateData);
+        const workbook = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(workbook, worksheet, 'Contacts Template');
+
+        const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=contacts_template.xlsx');
+        res.send(buffer);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

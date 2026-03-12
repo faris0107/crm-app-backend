@@ -32,18 +32,11 @@ router.post('/', PeopleController.createPerson);
  *     summary: Update contact details (RBAC restricted)
  *     tags: [CRM]
  */
+// Bulk operations
+router.get('/download-template', PeopleController.downloadTemplate);
+router.post('/bulk-upload', upload.single('file'), PeopleController.bulkUpload);
+
 router.get('/:id', PeopleController.getPerson);
 router.put('/:id', PeopleController.updatePerson);
-router.delete('/:id', PeopleController.deletePerson);
-router.post('/:id/restore', PeopleController.restorePerson);
-
-/**
- * @swagger
- * /api/people/bulk-upload:
- *   post:
- *     summary: Import contacts from Excel
- *     tags: [CRM]
- */
-router.post('/bulk-upload', upload.single('file'), PeopleController.bulkUpload);
 
 module.exports = router;
