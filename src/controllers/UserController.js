@@ -6,13 +6,15 @@ exports.addUser = async (req, res) => {
     try {
         const { email, name, role_id, entity_id, password, user_code, mobile, parent_id } = req.body;
 
-        // --- Uniqueness Checks ---
-        const existingEmail = await User.findOne({ where: { email, is_deleted: false } });
-        if (existingEmail) return res.status(400).json({ message: 'User with this email already exists' });
+        const targetEntityId = entity_id || req.user.activeEntityId;
+
+        // --- Uniqueness Checks (Scoped to Company) ---
+        const existingEmail = await User.findOne({ where: { email, entity_id: targetEntityId, is_deleted: false } });
+        if (existingEmail) return res.status(400).json({ message: 'User with this email already exists in this company' });
 
         if (mobile) {
-            const existingMobile = await User.findOne({ where: { mobile, is_deleted: false } });
-            if (existingMobile) return res.status(400).json({ message: 'User with this mobile number already exists' });
+            const existingMobile = await User.findOne({ where: { mobile, entity_id: targetEntityId, is_deleted: false } });
+            if (existingMobile) return res.status(400).json({ message: 'User with this mobile number already exists in this company' });
         }
         // -------------------------
 
@@ -161,19 +163,21 @@ exports.updateUser = async (req, res) => {
         const { id } = req.params;
         const { email, name, role_id, entity_id, password, user_code, mobile, parent_id } = req.body;
 
-        // --- Uniqueness Checks ---
+        // --- Uniqueness Checks (Scoped to Company) ---
+        const targetEntityId = entity_id !== undefined ? entity_id : user.entity_id;
+        
         if (email) {
             const existingEmail = await User.findOne({
-                where: { email, is_deleted: false, id: { [Op.ne]: id } }
+                where: { email, entity_id: targetEntityId, is_deleted: false, id: { [Op.ne]: id } }
             });
-            if (existingEmail) return res.status(400).json({ message: 'User with this email already exists' });
+            if (existingEmail) return res.status(400).json({ message: 'User with this email already exists in this company' });
         }
 
         if (mobile) {
             const existingMobile = await User.findOne({
-                where: { mobile, is_deleted: false, id: { [Op.ne]: id } }
+                where: { mobile, entity_id: targetEntityId, is_deleted: false, id: { [Op.ne]: id } }
             });
-            if (existingMobile) return res.status(400).json({ message: 'User with this mobile number already exists' });
+            if (existingMobile) return res.status(400).json({ message: 'User with this mobile number already exists in this company' });
         }
         // -------------------------
 
@@ -283,12 +287,12 @@ exports.restoreUser = async (req, res) => {
         const strippedMobile = user.mobile ? user.mobile.replace(/_del_\d+$/, '') : null;
         const strippedUserCode = user.user_code ? user.user_code.replace(/_del_\d+$/, '') : null;
         
-        const existingEmail = await User.findOne({ where: { email: strippedEmail, is_deleted: false } });
-        if (existingEmail) return res.status(400).json({ message: 'Cannot restore: Email is already in use by an active user.' });
+        const existingEmail = await User.findOne({ where: { email: strippedEmail, entity_id: user.entity_id, is_deleted: false } });
+        if (existingEmail) return res.status(400).json({ message: 'Cannot restore: Email is already in use by an active user in this company.' });
         
         if (strippedMobile) {
-            const existingMobile = await User.findOne({ where: { mobile: strippedMobile, is_deleted: false } });
-            if (existingMobile) return res.status(400).json({ message: 'Cannot restore: Mobile number is already in use by an active user.' });
+            const existingMobile = await User.findOne({ where: { mobile: strippedMobile, entity_id: user.entity_id, is_deleted: false } });
+            if (existingMobile) return res.status(400).json({ message: 'Cannot restore: Mobile number is already in use by an active user in this company.' });
         }
 
         await user.update({ 
