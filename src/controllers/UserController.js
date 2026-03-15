@@ -16,6 +16,11 @@ exports.addUser = async (req, res) => {
             const existingMobile = await User.findOne({ where: { mobile, entity_id: targetEntityId, is_deleted: false } });
             if (existingMobile) return res.status(400).json({ message: 'User with this mobile number already exists in this company' });
         }
+
+        if (name) {
+            const existingName = await User.findOne({ where: { name, entity_id: targetEntityId, is_deleted: false } });
+            if (existingName) return res.status(400).json({ message: 'User with this name already exists in this company' });
+        }
         // -------------------------
 
         // --- Role Hierarchy Check ---
@@ -178,6 +183,13 @@ exports.updateUser = async (req, res) => {
                 where: { mobile, entity_id: targetEntityId, is_deleted: false, id: { [Op.ne]: id } }
             });
             if (existingMobile) return res.status(400).json({ message: 'User with this mobile number already exists in this company' });
+        }
+
+        if (name) {
+            const existingName = await User.findOne({
+                where: { name, entity_id: targetEntityId, is_deleted: false, id: { [Op.ne]: id } }
+            });
+            if (existingName) return res.status(400).json({ message: 'User with this name already exists in this company' });
         }
         // -------------------------
 

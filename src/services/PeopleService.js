@@ -95,6 +95,19 @@ class PeopleService {
             }
         }
 
+        if (data.name) {
+            const existingName = await Person.findOne({
+                where: {
+                    name: data.name,
+                    entity_id: entityId,
+                    is_deleted: false
+                }
+            });
+            if (existingName) {
+                throw new Error('A contact with this name already exists in this company');
+            }
+        }
+
         const person = await Person.create({
             ...data,
             entity_id: entityId,
@@ -133,6 +146,20 @@ class PeopleService {
                 });
                 if (existing) {
                     throw new Error('A contact with this mobile number already exists in this company');
+                }
+            }
+
+            if (data.name && data.name !== person.name) {
+                const existingName = await Person.findOne({
+                    where: {
+                        name: data.name,
+                        entity_id: entityId,
+                        is_deleted: false,
+                        id: { [Op.ne]: id }
+                    }
+                });
+                if (existingName) {
+                    throw new Error('A contact with this name already exists in this company');
                 }
             }
 
