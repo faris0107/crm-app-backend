@@ -279,7 +279,25 @@ exports.restoreUser = async (req, res) => {
         }
         // ----------------------------
 
-        await user.update({ is_deleted: false, active: true });
+        const strippedEmail = user.email.replace(/_del_\d+$/, '');
+        const strippedMobile = user.mobile ? user.mobile.replace(/_del_\d+$/, '') : null;
+        const strippedUserCode = user.user_code ? user.user_code.replace(/_del_\d+$/, '') : null;
+        
+        const existingEmail = await User.findOne({ where: { email: strippedEmail, is_deleted: false } });
+        if (existingEmail) return res.status(400).json({ message: 'Cannot restore: Email is already in use by an active user.' });
+        
+        if (strippedMobile) {
+            const existingMobile = await User.findOne({ where: { mobile: strippedMobile, is_deleted: false } });
+            if (existingMobile) return res.status(400).json({ message: 'Cannot restore: Mobile number is already in use by an active user.' });
+        }
+
+        await user.update({ 
+            is_deleted: false, 
+            active: true,
+            email: strippedEmail,
+            mobile: strippedMobile,
+            user_code: strippedUserCode
+        });
         res.json({ message: 'User restored successfully' });
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -345,7 +363,13 @@ exports.deleteUser = async (req, res) => {
         }
         // ----------------------------
 
-        await user.update({ is_deleted: true });
+        const timestamp = Date.now();
+        await user.update({ 
+            is_deleted: true,
+            email: `${user.email}_del_${timestamp}`,
+            mobile: user.mobile ? `${user.mobile}_del_${timestamp}` : null,
+            user_code: user.user_code ? `${user.user_code}_del_${timestamp}` : null
+        });
         res.json({ message: 'User deleted successfully (soft delete)' });
     } catch (error) {
         res.status(400).json({ message: error.message });

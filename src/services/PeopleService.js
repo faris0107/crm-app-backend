@@ -170,7 +170,11 @@ class PeopleService {
             throw new Error('Unauthorized: L2 can only delete their assigned contacts');
         }
 
-        await person.update({ is_deleted: true });
+        const timestamp = Date.now();
+        await person.update({ 
+            is_deleted: true,
+            mobile: person.mobile ? `${person.mobile}_del_${timestamp}` : null
+        });
         await Timeline.create({
             person_id: person.id,
             user_id: userId,
@@ -188,7 +192,17 @@ class PeopleService {
         const person = await Person.findOne({ where: { id, is_deleted: true } });
         if (!person) throw new Error('Deleted contact not found');
 
-        await person.update({ is_deleted: false });
+        const strippedMobile = person.mobile ? person.mobile.replace(/_del_\d+$/, '') : null;
+        
+        if (strippedMobile) {
+            const existingMobile = await Person.findOne({ where: { mobile: strippedMobile, is_deleted: false } });
+            if (existingMobile) throw new Error('Cannot restore: Mobile number is already in use by an active Contact.');
+        }
+
+        await person.update({ 
+            is_deleted: false,
+            mobile: strippedMobile 
+        });
         await Timeline.create({
             person_id: person.id,
             user_id: userId,
