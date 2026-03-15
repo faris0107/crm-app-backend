@@ -33,10 +33,19 @@ exports.addUser = async (req, res) => {
 
         if (!isSystem) {
             if (currentUserRole === 'ADMIN') {
-                if (targetRole.name !== 'L1') {
-                    return res.status(403).json({ message: 'Admins can only create L1 Managers' });
+                if (targetRole.name === 'L1') {
+                    finalParentId = req.user.id;
+                } else if (targetRole.name === 'L2') {
+                    if (!finalParentId) {
+                        return res.status(400).json({ message: 'An L2 Supervisor must be assigned to an L1 Manager' });
+                    }
+                    const parent = await User.findByPk(finalParentId, { include: [Role] });
+                    if (!parent || parent.Role?.name !== 'L1') {
+                         return res.status(400).json({ message: 'L2 Supervisor must report to an L1 Manager' });
+                    }
+                } else {
+                    return res.status(403).json({ message: 'Admins can only create L1 or L2 users' });
                 }
-                finalParentId = req.user.id;
             } else if (currentUserRole === 'L1') {
                 if (targetRole.name !== 'L2') {
                     return res.status(403).json({ message: 'L1 Managers can only create L2 Supervisors' });
@@ -225,13 +234,22 @@ exports.updateUser = async (req, res) => {
 
             if (!isSystem) {
                 if (currentUserRole === 'ADMIN') {
-                    if (targetRole.name !== 'L1') {
-                        return res.status(403).json({ message: 'Admins can only assign L1 Managers' });
+                    if (targetRole.name === 'L2') {
+                        if (!finalParentId) {
+                            return res.status(400).json({ message: 'An L2 Supervisor must be assigned to an L1 Manager' });
+                        }
+                        const parent = await User.findByPk(finalParentId, { include: [Role] });
+                        if (!parent || parent.Role?.name !== 'L1') {
+                             return res.status(400).json({ message: 'L2 Supervisor must report to an L1 Manager' });
+                        }
+                    } else if (targetRole.name !== 'L1') {
+                        return res.status(403).json({ message: 'Admins can only assign L1 or L2 roles' });
                     }
                 } else if (currentUserRole === 'L1') {
                     if (targetRole.name !== 'L2') {
                         return res.status(403).json({ message: 'L1 Managers can only assign L2 Supervisors' });
                     }
+                    finalParentId = req.user.id;
                 }
             } else {
                 if (targetRole.name === 'ADMIN') finalParentId = null;
