@@ -84,6 +84,21 @@ const initializeDatabase = async () => {
     const { Entity, User, Status, Role } = require('./models');
     console.log('🌱 Initializing/Updating default data...');
 
+    // Drop global unique constraints that prevent multi-company usage
+    try {
+        const drop = async (tableName) => {
+            const [indexes] = await sequelize.query(`SHOW INDEX FROM ${tableName} WHERE Key_name != 'PRIMARY'`);
+            for (let idx of indexes) {
+                if (idx.Non_unique === 0 && idx.Key_name !== 'PRIMARY') {
+                    console.log(`Dropping unique index ${idx.Key_name} from ${tableName}`);
+                    try { await sequelize.query(`ALTER TABLE ${tableName} DROP INDEX ${idx.Key_name}`); } catch(e) {}
+                }
+            }
+        };
+        await drop('Users');
+        await drop('People');
+    } catch(e) { console.error('Error dropping constraints', e); }
+
     // 1. Seed Global Roles
     const defaultRoles = [
         { name: 'SUPERADMIN', description: 'Total system access', is_system: true, entity_id: null }
